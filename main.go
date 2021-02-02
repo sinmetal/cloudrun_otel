@@ -82,7 +82,7 @@ func main() {
 			_, _ = fmt.Fprint(w, err.Error())
 		}
 
-		_, _ = io.WriteString(w, "Hello, world!\n")
+		_, _ = io.WriteString(w, "Hello, otel world!")
 	}
 	otelHandler := otelhttp.NewHandler(http.HandlerFunc(helloHandler), "Hello")
 	http.Handle("/hello", otelHandler)
