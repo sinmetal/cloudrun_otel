@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 
+	"cloud.google.com/go/compute/metadata"
 	"cloud.google.com/go/datastore"
 	cloudtrace "github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/trace"
 	"github.com/google/uuid"
@@ -46,18 +47,27 @@ func initClient(ctx context.Context, projectID string) error {
 
 func main() {
 	ctx := context.Background()
+	var err error
 
-	projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
+	var projectID string
+	if !metadata.OnGCE() {
+		projectID = os.Getenv("GOOGLE_CLOUD_PROJECT")
+	} else {
+		projectID, err = metadata.ProjectID()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 
 	flush := initTracer(projectID)
 	defer flush()
 
 	if err := initClient(ctx, projectID); err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	als, err := NewAccessLogStore(ctx, ds)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	helloHandler := func(w http.ResponseWriter, req *http.Request) {
@@ -72,7 +82,7 @@ func main() {
 			_, _ = fmt.Fprint(w, err.Error())
 		}
 
-		_, _ = io.WriteString(w, "Hello, world!\n")
+		_, _ = io.WriteString(w, "Hello, otel world!")
 	}
 	otelHandler := otelhttp.NewHandler(http.HandlerFunc(helloHandler), "Hello")
 	http.Handle("/hello", otelHandler)
