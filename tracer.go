@@ -90,13 +90,16 @@ func GetCloudTraceHeader(r *http.Request) (*CloudTraceHeader, error) {
 	}
 	cth.TraceID = fl[0]
 	sl := strings.Split(fl[1], ";")
-	cth.SpanID = sl[0]
 	if len(sl) < 2 {
+		cth.SpanID = fl[1]
+	} else {
+		cth.SpanID = sl[0]
 		if sl[1] == "o=1" {
 			cth.TraceTrue = 1
 		} else if sl[1] == "o=0" {
 			cth.TraceTrue = 0
 		}
 	}
+
 	return cth, nil
 }
