@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -11,14 +9,11 @@ import (
 	"cloud.google.com/go/compute/metadata"
 	"cloud.google.com/go/datastore"
 	cloudtrace "github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/trace"
-	"github.com/google/uuid"
 	octrace "go.opencensus.io/trace"
 	otelhttp "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
 	bridge "go.opentelemetry.io/otel/bridge/opencensus"
-	"go.opentelemetry.io/otel/label"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"go.opentelemetry.io/otel/trace"
 )
 
 var ds *datastore.Client
@@ -70,21 +65,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	helloHandler := func(w http.ResponseWriter, req *http.Request) {
-		ctx := req.Context()
-		span := trace.SpanFromContext(ctx)
-		span.SetAttributes(label.String("server", "handling this..."))
-
-		_, err := als.Insert(ctx, &AccessLog{
-			ID: uuid.New().String(),
-		})
-		if err != nil {
-			_, _ = fmt.Fprint(w, err.Error())
-		}
-
-		_, _ = io.WriteString(w, "Hello, otel world!")
+	handlers := handlers{
+		als: als,
 	}
-	otelHandler := otelhttp.NewHandler(http.HandlerFunc(helloHandler), "Hello")
+
+	otelHandler := otelhttp.NewHandler(http.HandlerFunc(handlers.HelloHandler), "Hello")
+	http.Handle("/hello2", otelhttp.NewHandler(http.HandlerFunc(handlers.Hello2Handler), "Hello2"))
 	http.Handle("/hello", otelHandler)
 	err = http.ListenAndServe(":8080", nil)
 	if err != nil {
