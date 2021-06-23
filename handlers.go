@@ -41,7 +41,7 @@ func (h *handlers) hello2Handler(w http.ResponseWriter, req *http.Request) (err 
 	ctx := SpanContextFromHttpRequest(req.Context(), req)
 	ctx, _ = StartSpan(ctx, "hello2Handler")
 	ctx = aelog.WithHTTPRequest(ctx, req)
-	defer EndSpan(ctx, err)
+	defer func() { EndSpan(ctx, err) }()
 
 	id := uuid.New().String()
 	_, err = h.als.Insert(ctx, &AccessLog{
