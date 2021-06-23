@@ -64,7 +64,9 @@ func SpanContextFromHttpRequest(ctx context.Context, r *http.Request) context.Co
 	spanID, err := trace.SpanIDFromHex(cth.SpanID)
 	if err != nil {
 		aelog.Warningf(ctx, "invalid SpanID err=%s", err)
-		return ctx
+		return trace.ContextWithRemoteSpanContext(ctx, trace.SpanContext{
+			TraceID: traceID,
+		})
 	}
 	return trace.ContextWithRemoteSpanContext(ctx, trace.SpanContext{
 		TraceID: traceID,
