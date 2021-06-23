@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
+	"github.com/vvakame/sdlog/aelog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/label"
@@ -53,9 +53,10 @@ func SpanContextFromHttpRequest(ctx context.Context, r *http.Request) context.Co
 	if traceIDHex == "" {
 		return ctx
 	}
+	aelog.Infof(ctx, "TraceID:%s", traceIDHex)
 	traceID, err := trace.TraceIDFromHex(traceIDHex)
 	if err != nil {
-		fmt.Printf("warning: failed err=%s", err)
+		aelog.Warningf(ctx, "warning: failed err=%s", err)
 		return ctx
 	}
 	return trace.ContextWithRemoteSpanContext(ctx, trace.SpanContext{
