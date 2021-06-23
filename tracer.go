@@ -24,6 +24,7 @@ func EndSpan(ctx context.Context, err error) {
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
+		aelog.Infof(ctx, "add error status: %s", err)
 	}
 	span.End()
 }

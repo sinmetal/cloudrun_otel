@@ -39,7 +39,7 @@ func (h *handlers) Hello2Handler(w http.ResponseWriter, req *http.Request) {
 
 func (h *handlers) hello2Handler(w http.ResponseWriter, req *http.Request) (err error) {
 	ctx := SpanContextFromHttpRequest(req.Context(), req)
-	ctx, _ = StartSpan(ctx, "hello2")
+	ctx, _ = StartSpan(ctx, "hello2Handler")
 	ctx = aelog.WithHTTPRequest(ctx, req)
 	defer EndSpan(ctx, err)
 
