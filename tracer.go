@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/vvakame/sdlog/aelog"
 	"go.opentelemetry.io/otel"
@@ -49,17 +51,52 @@ func SetAttributesKV(ctx context.Context, kv map[string]interface{}) {
 }
 
 func SpanContextFromHttpRequest(ctx context.Context, r *http.Request) context.Context {
-	traceIDHex := r.Header.Get("X-Cloud-Trace-Context")
-	if traceIDHex == "" {
+	cth, err := GetCloudTraceHeader(r)
+	if err != nil {
 		return ctx
 	}
-	aelog.Infof(ctx, "TraceID:%s", traceIDHex)
-	traceID, err := trace.TraceIDFromHex(traceIDHex)
+	traceID, err := trace.TraceIDFromHex(cth.TraceID)
 	if err != nil {
-		aelog.Warningf(ctx, "warning: failed err=%s", err)
+		aelog.Warningf(ctx, "invalid TraceID err=%s", err)
+		return ctx
+	}
+	spanID, err := trace.SpanIDFromHex(cth.SpanID)
+	if err != nil {
+		aelog.Warningf(ctx, "invalid SpanID err=%s", err)
 		return ctx
 	}
 	return trace.ContextWithRemoteSpanContext(ctx, trace.SpanContext{
 		TraceID: traceID,
+		SpanID:  spanID,
 	})
+}
+
+type CloudTraceHeader struct {
+	TraceID   string
+	SpanID    string
+	TraceTrue int // -1=未指定, 0=Traceしない, 1=Traceする
+}
+
+// GetCloudTraceHeader
+// https://cloud.google.com/trace/docs/setup?hl=en#force-trace
+func GetCloudTraceHeader(r *http.Request) (*CloudTraceHeader, error) {
+	cth := &CloudTraceHeader{
+		TraceTrue: -1,
+	}
+	traceHeader := r.Header.Get("X-Cloud-Trace-Context")
+	fl := strings.Split(traceHeader, "/")
+	if len(fl) < 2 {
+		return nil, fmt.Errorf("invalid Header")
+	}
+	cth.TraceID = fl[0]
+	sl := strings.Split(fl[1], ";")
+	cth.SpanID = sl[0]
+	if len(sl) < 2 {
+		if sl[1] == "o=1" {
+			cth.TraceTrue = 1
+		} else if sl[1] == "o=0" {
+			cth.TraceTrue = 0
+		}
+	}
+	return cth, nil
 }
