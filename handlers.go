@@ -43,8 +43,9 @@ func (h *handlers) hello2Handler(w http.ResponseWriter, req *http.Request) (err 
 	ctx = aelog.WithHTTPRequest(ctx, req)
 	defer EndSpan(ctx, err)
 
+	id := uuid.New().String()
 	_, err = h.als.Insert(ctx, &AccessLog{
-		ID: uuid.New().String(),
+		ID: id,
 	})
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -53,8 +54,13 @@ func (h *handlers) hello2Handler(w http.ResponseWriter, req *http.Request) (err 
 		return
 	}
 
+	aelog.Infof(ctx, "AccessLogID:%s", id)
 	msg := req.FormValue("message")
-	SetAttributesKV(ctx, map[string]interface{}{"message": msg, "time.Unix": time.Now().Unix()})
+	SetAttributesKV(ctx, map[string]interface{}{
+		"id":        id,
+		"message":   msg,
+		"time.Unix": time.Now().Unix(),
+	})
 
 	if msg == "" {
 		err = fmt.Errorf("message is required")
